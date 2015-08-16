@@ -16,6 +16,13 @@ Installation:
 Usage:
 	Both scripts contain extensive help available via -?
 
+	mkimg.pl: To create 20 files named file01.jpg to file20.jpg:
+		./mkimg.pl -n 20
+
+ 	sortimg.pl: To sort files in directory Pictures into directories based
+   	on their year and month (e.g. 2015/01-January) into a directory
+   	named output:
+		./sortimg.pl -r -lm -o output Pictures
 
 Note:
 	mkimg.pl discourages use by root due to system call usage.

@@ -7,7 +7,7 @@
  USAGE:	To sort files in directory Pictures into directories based
    on their year and month (e.g. 2015/01-January) into a directory
    named output:
-	./sortimg.pl -lm -o output Pictures
+	./sortimg.pl -r -lm -o output Pictures
  Use -? for detailed help.
 =cut
 use strict;
@@ -87,7 +87,7 @@ sub usage {
   { printf("  %-12s %s\n",$key,$optHelp{$key}); }
   print(" Note: Use of -fm will allow any file to be sorted, not only images.\n");
   print("\nexample: The following will sort pictures in the Pics directory into the Out directory organized by year then month number\n");
-  print("\t$0 -o Out Pics\n");
+  print("\t$0 -r -o Out Pics\n");
   exit;
 }
 
