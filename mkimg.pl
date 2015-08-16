@@ -85,7 +85,7 @@ sub optCheck {
  Argument2	: File number
 =cut
 sub makePic0 {
-  my $FN=sprintf($_[0], $_[1]);
+  my $FN = sprintf($_[0], $_[1]);
   my @command1 = ("convert","-size","1024x768","xc:gray","+noise","Random",$FN);
   system(@command1)==0 or die ("Failed to create pictures!");
   my $month=sprintf("%02d",int(rand(12)+1));
@@ -113,24 +113,24 @@ sub blankLine {
  Argument	: None
 =cut
 sub makePictures {
-  if($options{FileNum}<=0) { print("Nothing to do. No files to create."); usage(); }
+  if ($options{FileNum} <= 0) { print("Nothing to do. No files to create."); usage(); }
   make_path($options{FileDir}) if (!-d $options{FileDir});
-  my $FileStr="$options{FileDir}/$options{FileBaseName}%0".length($options{FileNum})."d.jpg";
-  my $time0=Time::HiRes::gettimeofday();
+  my $FileStr = "$options{FileDir}/$options{FileBaseName}%0".length($options{FileNum})."d.jpg";
+  my $time0 = Time::HiRes::gettimeofday();
   makePic0($FileStr,0);
-  my $yearBumpCount=($options{FileNum}/($options{YearEnd}-$options{YearStart}+1));
-  my $bump=0; # keeps track of how many times we have incremented the year
-  my $clock=Time::Piece->strptime('00','%S');
+  my $yearBumpCount = ($options{FileNum}/($options{YearEnd}-$options{YearStart}+1));
+  my $bump = 0; # keeps track of how many times we have incremented the year
+  my $clock = Time::Piece->strptime('00','%S');
   printf("Please wait, creating $options{FileNum} pictures. This will take ~%0d seconds\n",((Time::HiRes::gettimeofday()-$time0)*$options{FileNum})) if !$options{Quiet};
-  my $status=sprintf(($options{FileNum}-1)." files, ".($clock+((Time::HiRes::gettimeofday()-$time0)*($options{FileNum}-1)))->strftime("%H:%M:%S")." remaining");
+  my $status = sprintf(($options{FileNum}-1)." files, ".($clock+((Time::HiRes::gettimeofday()-$time0)*($options{FileNum}-1)))->strftime("%H:%M:%S")." remaining");
   print($status) if ($options{Verbose});
-  for(my $i=1;$i<$options{FileNum};$i++) {
-    if($options{Verbose} && !(($i) %10)) {
+  for (my $i = 1; $i < $options{FileNum}; $i++) {
+    if ($options{Verbose} && !(($i) %10)) {
       blankLine(length($status));
-      $status=sprintf(($options{FileNum}-$i)." files, ".($clock+((Time::HiRes::gettimeofday()-$time0)/$i*($options{FileNum}-$i)))->strftime("%H:%M:%S")." remaining");
+      $status = sprintf(($options{FileNum}-$i)." files, ".($clock+((Time::HiRes::gettimeofday()-$time0)/$i*($options{FileNum}-$i)))->strftime("%H:%M:%S")." remaining");
       print($status);
     }
-    if($i-($bump*$yearBumpCount)>$yearBumpCount) {
+    if ($i-($bump*$yearBumpCount)>$yearBumpCount) {
       $bump++; 
       $options{Year}++;
     }
