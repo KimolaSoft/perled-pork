@@ -1,21 +1,26 @@
 #!/usr/bin/perl
-# TODO: add support for FileDir
-# Program to create jpg image files and set exif modify date within the files
-package mkimg;
+=head1 mkimg.pl
+ Program to create jpg image files and set exif modify date within the files
+ USAGE:	To create 20 files named file01.jpg to file20.jpg:
+	./mkimg.pl -n 20
+ Use -? for detailed help.
+=cut
 use strict;
 use warnings;
 use Getopt::Long;
 use Time::HiRes;
 use File::Path qw(make_path);
+use Time::Piece;
 # Variable definitions
 my %optHelp = (
 	"-n"		=> "Number of random files to generate (Required option)",
 	"-f"		=> "Base filename, e.g. '-f file' yields a filename like file0.jpg",
 	"-allowroot"	=> "Permit use as root (potentially unsafe)",
-	"-fy"		=> "First year for new files (range: 1990 - 2050) default 2010",
-	"-ly"		=> "Last year for new files (range: 1990 - 2050) default 2015",
+	"-fy"		=> "First year for new files (range: 1990 - 2030) default 2010",
+	"-ly"		=> "Last year for new files (range: 1990 - 2030) default 2015",
 	"-o"		=> "Output directory for created files (created if non-existant)",
 	"-q"		=> "Quiet",
+	"-v"		=> "Verbose",
 	"-h or -?" 	=> "This Menu");
 my %options = ( 
 	FileNum		=> 0,
@@ -23,6 +28,7 @@ my %options = (
 	FileDir		=> "./",
 	NoRootCheck	=> 0,
 	Quiet		=> 0,
+	Verbose		=> 0,
 	YearStart	=> 2010,
 	YearEnd		=> 2015);
 my $doHelp = 0;
@@ -34,6 +40,7 @@ my $doHelp = 0;
 	'o:s'  => \$options{FileDir},
 	'allowroot' => \$options{NoRootCheck},
 	'q'    => \$options{Quiet},
+	'v'    => \$options{Verbose},
 	'fy:i' => \$options{YearStart},
 	'ly:i' => \$options{YearEnd},
 	'h|?'  => \$doHelp), or usage();
@@ -44,7 +51,11 @@ my $doHelp = 0;
 # Main ends
 
 # subroutines
-# usage: Explains how to use this program
+=head2 usage
+ Usage		: usage()
+ Function	: Display help menu for how to use the script
+ Argument       : None
+=cut
 sub usage {
   print("USAGE: $0 [options]\n");
   foreach my $key (sort keys %optHelp)
@@ -52,18 +63,27 @@ sub usage {
   exit;
 }
 
-# optCheck: Verifies options are within valid ranges
+=head2 optCheck
+ Usage		: optCheck()
+ Function	: Verifies valid years have been specified for start/end
+ Argument	: None
+=cut
 sub optCheck {
-  if ($options{YearStart} < 1990 || $options{YearStart} > 2050) { usage(); }
-  if ($options{YearEnd} < $options{YearStart} || $options{YearEnd} > 2050) { usage(); }
+  usage() if ($options{YearStart} < 1990 || $options{YearStart} > 2030);
+  usage() if ($options{YearEnd} < $options{YearStart} || $options{YearEnd} > 2030);
   $options{Year} = $options{YearStart};
+  print("Quiet and verbose is somewhat an odd combination.\n") if ($options{Verbose} && $options{Quiet});
 }
 
-# makePic0: Worker, actually creates picture and sets exif data (random month)
-# arg1 Filename base string to sprint into
-# arg2 number of current picture
+=head2 makePic0
+ Usage		: makePic0('path/to/file/to/create%02d.jpg',$id)
+ Function	: Creates file specified using system call to convert
+		: Also sets EXIF DateTimeOriginal to specified year and random month
+ Argument1	: Filename to create, including %d for printing file number into
+ Argument2	: File number
+=cut
 sub makePic0 {
-  my $FN=sprintf($_[0], $options{FileBaseName}, $_[1]);
+  my $FN=sprintf($_[0], $_[1]);
   my @command1 = ("convert","-size","1024x768","xc:gray","+noise","Random",$FN);
   system(@command1)==0 or die ("Failed to create pictures!");
   my $month=sprintf("%02d",int(rand(12)+1));
@@ -72,23 +92,42 @@ sub makePic0 {
   #-DateTimeOriginal, -CreateDate, and -ModifyDate are all standard, -AllDates sets all three
 }
 
-# makePictures: Runs convert and exiftool to create images as specified
-# increments year automatically
+=head2 makePictures
+ Usage		: makePictures()
+ Function	: Calls makePic0 to create specified number of images. Reports status.
+		: Also increments year as needed to average the same number each year.
+ Argument	: None
+=cut
 sub makePictures {
   if($options{FileNum}<=0) { print("Nothing to do. No files to create."); usage(); }
-  if (!-d $options{FileDir}) { make_path($options{FileDir}); }
-  my $FileStr=$options{FileDir}."/%s%0".length($options{FileNum})."d.jpg";
-  my $time1=Time::HiRes::gettimeofday();
+  make_path($options{FileDir}) if (!-d $options{FileDir});
+  my $FileStr="$options{FileDir}/$options{FileBaseName}%0".length($options{FileNum})."d.jpg";
+  my $time0=Time::HiRes::gettimeofday();
   makePic0($FileStr,0);
-  $time1=Time::HiRes::gettimeofday()-$time1;
   my $yearBumpCount=($options{FileNum}/($options{YearEnd}-$options{YearStart}+1));
   my $bump=0; # keeps track of how many times we have incremented the year
-  printf("Please wait, creating $options{FileNum} pictures. This will take ~%0.2f seconds\n",($time1*$options{FileNum})) if !$options{Quiet};
-  for(my $i=1;$i<$options{FileNum};$i++)
-  {
-    if($i-($bump*$yearBumpCount)>$yearBumpCount) 
-      { $bump++; $options{Year}++;}
+  my $clock=Time::Piece->strptime('00','%S');
+  printf("Please wait, creating $options{FileNum} pictures. This will take ~%0d seconds\n",((Time::HiRes::gettimeofday()-$time0)*$options{FileNum})) if !$options{Quiet};
+  my $status=sprintf(($options{FileNum}-1)." files, ".($clock+((Time::HiRes::gettimeofday()-$time0)*($options{FileNum}-1)))->strftime("%H:%M:%S")." remaining");
+  print($status) if ($options{Verbose});
+  for(my $i=1;$i<$options{FileNum};$i++) {
+    if($options{Verbose} && !(($i) %10)) {
+      print("\b"x(length($status)));
+      print(" " x(length($status)));
+      print("\b"x(length($status)));
+      $status=sprintf(($options{FileNum}-$i)." files, ".($clock+((Time::HiRes::gettimeofday()-$time0)/$i*($options{FileNum}-$i)))->strftime("%H:%M:%S")." remaining");
+      print($status);
+    }
+    if($i-($bump*$yearBumpCount)>$yearBumpCount) {
+      $bump++; 
+      $options{Year}++;
+    }
     makePic0($FileStr,$i);
   }
+  if ($options{Verbose}) {
+    print("\b"x(length($status)));
+    print(" " x(length($status)));
+    print("\b"x(length($status)));
+  }
+  print("\nCompleted.\n") if (!$options{Quiet});
 }
-
