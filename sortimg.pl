@@ -1,5 +1,15 @@
 #!/usr/bin/perl
-# Organizes image (jpg) files based on their EXIF date
+=head1 sortimg.pl
+ Program to sort files primarily based on their EXIF modify date.
+   Other date sources such as modification date allow use with more
+   than only image files.
+
+ USAGE:	To sort files in directory Pictures into directories based
+   on their year and month (e.g. 2015/01-January) into a directory
+   named output:
+	./sortimg.pl -lm -o output Pictures
+ Use -? for detailed help.
+=cut
 use strict;
 use warnings;
 use Getopt::Long;
@@ -35,9 +45,12 @@ my %options = (
 	FileDir		=> ".");
 my $doHelp = 0;
 my $exif = new Image::ExifTool;
+my $numFiles = 0;
+my $numDone = 1; # Must begin at 1 to prevent division by zero later
+my $clock = Time::Piece->strptime('00','%S');
 
 # Main begins
-if (!$ARGV[0]) { usage(); }
+  usage() if (!$ARGV[0]);
   GetOptions ( 
 	'y'    => sub { $options{DirMonth}="%Y"; },
 	'nm'   => sub { $options{DirMonth}="%Y/%m-%b"; },
@@ -52,10 +65,13 @@ if (!$ARGV[0]) { usage(); }
 	'o:s'  => \$options{FileDir},
 	'fc'   => \$options{DateAllowFC},
 	'fm'   => \$options{DateAllowFM},
-	'h|?'  => \$doHelp), or usage();
-  if (!$ARGV[0] || $doHelp) { usage(); }
-  if ($options{Verbose} && $options{Quiet}) { print("Quiet and verbose is somewhat an odd combination.\n"); }
+	'h|?'  => \$doHelp) or usage();
+  usage() if (!$ARGV[0] || $doHelp);
+  print("Quiet and verbose is somewhat an odd combination.\n") if ($options{Verbose} && $options{Quiet});
+  $numFiles = countFiles(@ARGV);
+  $|=1; # Enable flushing for prints
   movePics(@ARGV);
+  printf("File $numDone of $numFiles\n") if ($options{Verbose});
 # Main ends
 
 # Subroutines
@@ -81,17 +97,16 @@ sub usage {
 =cut
 sub getDate {
   $exif->ExtractInfo($_[0]);
-  my $date=$exif->GetValue('DateTimeOriginal');
-  $date=$exif->GetValue('CreateDate') if !defined $date;
-  $date=$exif->GetValue('ModifyDate') if !defined $date;
-  if (!defined $date && $options{DateAllowFC}) { $date=$exif->GetValue('FileCreateDate'); }
-  if (!defined $date && $options{DateAllowFM}) { $date=$exif->GetValue('FileModifyDate'); }
-  if (defined $date && $date=~/(\d+).(\d+)*/)
-  { # found a valid date
+  my $date = $exif->GetValue('DateTimeOriginal');
+  $date = $exif->GetValue('CreateDate') if (!defined $date);
+  $date = $exif->GetValue('ModifyDate') if (!defined $date);
+  $date = $exif->GetValue('FileCreateDate') if (!defined $date && $options{DateAllowFC});
+  $date = $exif->GetValue('FileModifyDate') if (!defined $date && $options{DateAllowFM});
+  if (defined $date && $date =~ /(\d+).(\d+)*/) {
     $date = Time::Piece->strptime(sprintf("$1%02d",$2),"%Y%m");
     return $date;
   }
-  print(STDERR "Skipping: No EXIF data in file $_[0]\n") if !$options{Quiet};
+  print(STDERR "Skipping: No EXIF data in file $_[0]\n") if (!$options{Quiet});
   return; #ensure return is empty
 }
 
@@ -101,15 +116,15 @@ sub getDate {
  Argument	: Filename to process
 =cut
 sub movePic0 {
-  my $date=getDate($_[0]);
-  if(defined $date) {
-    $date=$date->strftime($options{DirMonth});
-    make_path($options{FileDir}.'/'.$date);
-    my $newname=$options{FileDir}.'/'.$date.'/'.basename($_[0]);
-    if (!-e $newname || $options{Overwrite}) { move($_[0],$newname); }
-    else { 
-      if ($newname ne $_[0] && !$options{Quiet})
-      { print(STDERR "Skipping: $newname (file exists)\n"); }
+  my $date = getDate($_[0]);
+  if (defined $date) {
+    $date = $date->strftime($options{DirMonth});
+    make_path($options{FileDir}.'/'.$date) if (!-d ($options{FileDir}.'/'.$date));
+    my $newname = $options{FileDir}.'/'.$date.'/'.basename($_[0]);
+    if (!-e $newname || $options{Overwrite}) {
+      move($_[0],$newname); 
+    } else { 
+      print(STDERR "Skipping: $newname (file exists)\n") if ($newname ne $_[0] && !$options{Quiet});
     }
   }
 }
@@ -122,23 +137,44 @@ sub movePic0 {
 sub movePics {
   foreach my $file (@_)
   {
+    printf("File $numDone of $numFiles\n") if ($options{Verbose} && !($numDone % 100));
     if (-f $file)
     {
-      print("Processing $file\n") if $options{Verbose}>1;
+      print("Processing $file\n") if ($options{Verbose}>1);
       movePic0($file);
+      $numDone++;
     } elsif (-d $file)
     {
       if ($options{Recursive})
       {
-        print("Processing directory $file\n") if $options{Verbose};
-        my @newlist=<$file/*>;
+        #blankLine() if ($options{Verbose});
+        print("\nProcessing directory $file\n") if ($options{Verbose}>1);
+        my @newlist = <$file/*>;
         if (defined $newlist[0])
         {
           movePics(@newlist);
-          rmdir($file);
+          rmdir($file); # only actually works when directory is empty, so safe to call
         }
-      } else { print(STDERR "Skipping: Directory $file (recursive not specified)\n") if !$options{Quiet}; }
+      } else { print(STDERR "Skipping: Directory $file (recursive not specified)\n") if (!$options{Quiet}); }
     }
-#TODO calculate time for processing, occasional file updates for level 1 verbosity
   }
+}
+
+=head2 countFiles
+ Usage		: countFiles(@array_of_files)
+ Function	: Counts the number of files that may be impacted. If recursive, calls itself.
+ Argument	: Array of files/directories to process
+ Returns	: Number of files found
+=cut
+sub countFiles {
+  my $num = 0;
+  foreach my $file (@_)
+  {
+    $num++ if (-f $file);
+    if (-d $file) {
+      my @newlist = <$file/*>;
+      $num += countFiles(@newlist) if (defined $newlist[0]);
+    }
+  }
+  return $num;
 }
