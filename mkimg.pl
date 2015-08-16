@@ -57,9 +57,11 @@ my $doHelp = 0;
  Argument       : None
 =cut
 sub usage {
-  print("USAGE: $0 [options]\n");
+  print("Creates specified number of jpg images with varying EXIF date data\n");
+  print("\nUSAGE: $0 [options]\n");
   foreach my $key (sort keys %optHelp)
   { printf("  %-12s %s\n",$key,$optHelp{$key}); }
+  print("\nexample: The following will create 20 sample input files\n\t$0 -n 20\n");
   exit;
 }
 
