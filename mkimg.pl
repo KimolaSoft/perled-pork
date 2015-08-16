@@ -79,7 +79,7 @@ sub optCheck {
 
 =head2 makePic0
  Usage		: makePic0('path/to/file/to/create%02d.jpg',$id)
- Function	: Creates file specified using system call to convert
+ Function	: Worker method, creates file specified using system call to convert
 		: Also sets EXIF DateTimeOriginal to specified year and random month
  Argument1	: Filename to create, including %d for printing file number into
  Argument2	: File number
@@ -92,6 +92,18 @@ sub makePic0 {
   my @command2 = ("exiftool","-DateTimeOriginal='$options{Year}:$month:01 00:00:00'","-overwrite_original","-q",$FN);
   system(@command2)==0 or die ("Failed to insert exif data!");
   #-DateTimeOriginal, -CreateDate, and -ModifyDate are all standard, -AllDates sets all three
+}
+
+=head2 blankLine
+ Usage		: blankLine(20)
+ Function	: Writes argument backspaces, argument spaces, then argument backspaces 
+		: to clear the current line
+ Argument	: Number of characters to "erase"
+=cut
+sub blankLine {
+  print("\b"x($_[0]));
+  print(" " x($_[0]));
+  print("\b"x($_[0]));
 }
 
 =head2 makePictures
@@ -114,9 +126,7 @@ sub makePictures {
   print($status) if ($options{Verbose});
   for(my $i=1;$i<$options{FileNum};$i++) {
     if($options{Verbose} && !(($i) %10)) {
-      print("\b"x(length($status)));
-      print(" " x(length($status)));
-      print("\b"x(length($status)));
+      blankLine(length($status));
       $status=sprintf(($options{FileNum}-$i)." files, ".($clock+((Time::HiRes::gettimeofday()-$time0)/$i*($options{FileNum}-$i)))->strftime("%H:%M:%S")." remaining");
       print($status);
     }
@@ -126,10 +136,6 @@ sub makePictures {
     }
     makePic0($FileStr,$i);
   }
-  if ($options{Verbose}) {
-    print("\b"x(length($status)));
-    print(" " x(length($status)));
-    print("\b"x(length($status)));
-  }
+  blankLine(length($status)) if ($options{Verbose});
   print("\nCompleted.\n") if (!$options{Quiet});
 }

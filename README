@@ -17,3 +17,5 @@ Usage:
 	Both scripts contain extensive help available via -?
 
 
+Note:
+	mkimg.pl discourages use by root due to system call usage.
