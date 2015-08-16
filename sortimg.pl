@@ -46,7 +46,7 @@ my %options = (
 my $doHelp = 0;
 my $exif = new Image::ExifTool;
 my $numFiles = 0;
-my $numDone = 1; # Must begin at 1 to prevent division by zero later
+my $numDone = 0;
 my $clock = Time::Piece->strptime('00','%S');
 
 # Main begins
@@ -71,7 +71,7 @@ my $clock = Time::Piece->strptime('00','%S');
   $numFiles = countFiles(@ARGV);
   $|=1; # Enable flushing for prints
   movePics(@ARGV);
-  printf("File $numDone of $numFiles\n") if ($options{Verbose});
+  printf("File $numDone of $numFiles\nDone.\n") if ($options{Verbose});
 # Main ends
 
 # Subroutines
@@ -85,7 +85,9 @@ sub usage {
   print("\nUSAGE: $0 [options] <files-to-process>\n");
   foreach my $key (sort keys %optHelp)
   { printf("  %-12s %s\n",$key,$optHelp{$key}); }
-  print(" Note: Use of -fc or -fm will allow any file to be sorted, not only images.\n");
+  print(" Note: Use of -fm will allow any file to be sorted, not only images.\n");
+  print("\nexample: The following will sort pictures in the Pics directory into the Out directory organized by year then month number\n");
+  print("\t$0 -o Out Pics\n");
   exit;
 }
 
@@ -137,9 +139,9 @@ sub movePic0 {
 sub movePics {
   foreach my $file (@_)
   {
-    printf("File $numDone of $numFiles\n") if ($options{Verbose} && !($numDone % 100));
     if (-f $file)
     {
+      printf("File $numDone of $numFiles\n") if ($options{Verbose} && !($numDone % 100));
       print("Processing $file\n") if ($options{Verbose}>1);
       movePic0($file);
       $numDone++;
