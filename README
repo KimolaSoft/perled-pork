@@ -8,4 +8,12 @@ Requires:
 	ExifTool (Perhaps in libimage-exiftool-perl, tested with 9.74-1)
 	perl (tested with v5.20.2)
 
+Installation:
+	Copy scripts to location of your choice. (such as /usr/local/bin)
+	sudo cp mkimg.pl sortimg.pl /usr/local/bin
+	sudo chmod 755 /usr/local/bin/{mkimg.pl,sortimg.pl}
+
+Usage:
+	Both scripts contain extensive help available via -?
+
 
