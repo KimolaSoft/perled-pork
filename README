@@ -1,0 +1,11 @@
+# perled-pork
+This project is comprised of two perl scripts. The first, mkimg, is designed 
+to create random image files with an exif timestamp. The second, sortimg, is
+intended to organize image files by their creation date into subfolders.
+
+Requires:
+	ImageMagick (tested with 8:6.8.9.9-5, needed by mkimg)
+	ExifTool (Perhaps in libimage-exiftool-perl, tested with 9.74-1)
+	perl (tested with v5.20.2)
+
+
